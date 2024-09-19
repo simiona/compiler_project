@@ -17,6 +17,7 @@ extern int  yywrap();
 // your parser
 
 %union {
+<<<<<<< HEAD
 	A_pos pos; //position information
 	A_type type;
 	A_varDecl varDecl;
@@ -60,6 +61,21 @@ extern int  yywrap();
 	A_program program;
 	A_tokenId tokenId;
 	A_tokenNum tokenNum;
+=======
+  A_pos pos;
+  A_tokenId tokenId;
+  A_tokenNum tokenNum;
+  A_type type;
+  A_program program;
+  A_programElementList programElementList;
+  A_programElement programElement;
+  A_arithExpr arithExpr;
+  A_exprUnit exprUnit;
+  A_structDef structDef;
+  A_varDeclStmt varDeclStmt;
+  A_fnDeclStmt fnDeclStmt;
+  A_fnDef fnDef;
+>>>>>>> upstream/24f-assignment1
 }
 
 %token <pos> ADD          // +

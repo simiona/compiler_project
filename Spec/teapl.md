@@ -18,7 +18,8 @@ id := [a-z_A-Z][a-z_A-Z0-9]*
 
 TeaPL allows integers, e.g., 123
 ```
-num := [1-9][0-9]* | 0
+unum := [1-9][0-9]* | 0
+num := unum | < - > unum
 ```
 
 **Arithmatic Expressions**
@@ -26,16 +27,15 @@ An expression is a composd of identifiers, values,  and operators, e.g., 1+2, a*
 
 ```
 arithExpr := arithExpr arithBiOp arithExpr | exprUnit
-exprUnit :=  num | id | < ( > arithExpr < ) > | fnCall | leftVal < [ > id | num < ] > | leftVal < . > id | arithUOp exprUnit
+exprUnit :=  num | id | < ( > arithExpr < ) > | fnCall | leftVal < [ > id | num < ] > | leftVal < . > id
 arithBiOp := < + > | < - > | < * > | < / >
-arithUOp := < - >
 ```
 
 **Condition Expressions**
 
 ```
 boolExpr := boolExpr boolBiOp boolExpr | boolUnit
-boolUnit := exprUnit comOp exprUnit | < ( > boolExpr < ) > | boolUOp boolUnit // we restrict the operands of comparison operators to be exprUnit instead of rightVal to avoid confusing the precedence.
+boolUnit := < ( > exprUnit comOp exprUnit < ) > | < ( > boolExpr < ) > | boolUOp boolUnit // we restrict the operands of comparison operators to be exprUnit instead of rightVal to avoid confusing the precedence.
 boolBiOp := < && > | < || >
 boolUOp := < ! >
 comOp := < > > | < < > | < >= > | < <= > | < == > | < != >
@@ -47,7 +47,7 @@ We restrict neither the left value nor right value can be assignments.
 ```
 assignStmt := leftVal < = > rightVal < ; >  
 leftVal := id | leftVal < [ > id | num < ] > | leftVal < . > id
-rightVal := arithExpr | boolExpr
+rightVal := arithExpr
 ```
 
 **Function Call**
@@ -69,7 +69,7 @@ let b:int = 0; // declare a variable of int and init it with value 0.
 **One-level Array**
 
 ```
-let c[10]:int; // declear a variable of integer array.
+let c[10]:int; // declear a variable of integer array; the type field can be ignored.
 let d[10]:int = {0}; // declear a variable of integer array and initialize it with zero.
 ```
 
@@ -96,7 +96,8 @@ struct MyStruct {
 
 The grammar is defined as follows.
  ```
-structDef := < struct > id < { > (varDecl) (< , > varDecl)* < } >
+fieldDecl := id < : > type |  id < [ > num < ] >< : > type
+structDef := < struct > id < { > (fieldDecl) (< , > fieldDecl)* < } >
  ```
 
 ### Function Declaration and Definition
@@ -160,7 +161,8 @@ if (x >0) {
 
 Besides, we restrict the condition expression to be explicit logical operations, e.g., x >0; we donot allow implicit expressions like x, which means.  We define the grammar as follows.
 ```
-ifStmt := < if > < ( > boolExpr < ) > codeBlock ( < else > codeBlock | ϵ )
+boolUnit_ := < ( > exprUnit comOp exprUnit < ) > | < ( > boolExpr < ) > | < ( > boolUOp boolUnit < ) >
+ifStmt := < if > boolUnit_ codeBlock ( < else > codeBlock | ϵ )
 ```
 
 **While Statemet**
@@ -177,7 +179,7 @@ while (x  > 0) {
 Definition:
 
 ```
-whileStmt := < while > < ( > boolExpr < ) > codeBlock
+whileStmt := < while > boolUnit_ codeBlock
 ```
 
 ### Code Comments 
