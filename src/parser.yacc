@@ -17,7 +17,6 @@ extern int  yywrap();
 // your parser
 
 %union {
-<<<<<<< HEAD
 	A_pos pos; //position information
 	A_type type;
 	A_varDecl varDecl;
@@ -61,21 +60,6 @@ extern int  yywrap();
 	A_program program;
 	A_tokenId tokenId;
 	A_tokenNum tokenNum;
-=======
-  A_pos pos;
-  A_tokenId tokenId;
-  A_tokenNum tokenNum;
-  A_type type;
-  A_program program;
-  A_programElementList programElementList;
-  A_programElement programElement;
-  A_arithExpr arithExpr;
-  A_exprUnit exprUnit;
-  A_structDef structDef;
-  A_varDeclStmt varDeclStmt;
-  A_fnDeclStmt fnDeclStmt;
-  A_fnDef fnDef;
->>>>>>> upstream/24f-assignment1
 }
 
 %token <pos> ADD          // +
@@ -122,6 +106,7 @@ extern int  yywrap();
 
 %type	<type> Type;
 %type	<varDecl> VarDecl;
+%type	<varDecl> FieldDecl;
 %type	<varDef> VarDef;
 %type	<rightVal> RightVal;
 %type	<arithExpr> ArithExpr;
@@ -134,6 +119,7 @@ extern int  yywrap();
 %type	<arrayExpr> ArrayExpr;
 %type	<memberExpr> MemberExpr;
 %type	<boolUnit> BoolUnit;
+%type	<boolUnit> BoolUnit_;
 %type	<boolBiOpExpr> BoolBiOpExpr;
 %type	<boolUOpExpr> BoolUOpExpr;
 %type	<comExpr> ComExpr;
@@ -146,6 +132,7 @@ extern int  yywrap();
 %type	<varDeclArray> VarDeclArray;
 %type	<varDeclStmt> VarDeclStmt;
 %type	<varDeclList> VarDeclList;
+%type <varDeclList> FieldDeclList;
 %type	<structDef> StructDef;
 %type	<paramDecl> ParamDecl;
 %type	<fnDecl> FnDecl;
@@ -239,13 +226,12 @@ ArithBiOpExpr: ArithExpr ADD ArithExpr
 }
 ;
 
-ArithUExpr: SUB ExprUnit{
-	$$ = A_ArithUExpr($1, A_neg, $2);
-}
-;
 
 ExprUnit: NUM{
 	$$ = A_NumExprUnit($1->pos, $1->num);
+}
+| SUB NUM{
+		$$ = A_NumExprUnit($1, -1*$2->num);
 }
 | ID{
 	$$ = A_IdExprUnit($1->pos, $1->id);
@@ -261,9 +247,6 @@ ExprUnit: NUM{
 }
 | MemberExpr{
 	$$ = A_MemberExprUnit($1->pos, $1);
-}
-| ArithUExpr{
-	$$ = A_ArithUExprUnit($1->pos, $1);
 }
 ;
 
@@ -302,19 +285,19 @@ BoolBiOpExpr:  BoolExpr AND BoolExpr {
 }
 ;
 
-BoolUnit:ComExpr{
-	$$ = A_ComExprUnit($1->pos, $1);
+BoolUnit:LPAR ComExpr RPAR{
+	$$ = A_ComExprUnit($1, $2);
 }
 | BoolUOpExpr{
 	$$ = A_BoolUOpExprUnit($1->pos, $1);
 }
 | LPAR BoolExpr RPAR{
-	$$ = A_BoolExprUnit($2->pos, $2);
+	$$ = A_BoolExprUnit($1, $2);
 }
 ;
 
 BoolUOpExpr:NOT BoolUnit{
-	$$ = A_BoolUOpExpr($2->pos, A_not,$2);
+	$$ = A_BoolUOpExpr($1, A_not,$2);
 }
 ;
 
@@ -356,9 +339,6 @@ LeftVal: ID{
 
 RightVal: ArithExpr{
 	$$ = A_ArithExprRVal($1->pos, $1);
-}
-| BoolExpr{
-	$$ = A_BoolExprRVal($1->pos, $1);
 }
 ;
 
@@ -443,8 +423,26 @@ Type: INT{
 }
 ;
 
-StructDef: STRUCT ID LBRACE VarDeclList RBRACE{
+StructDef: STRUCT ID LBRACE FieldDeclList RBRACE{
 	$$ = A_StructDef($1, $2->id, $4);
+}
+;
+
+FieldDecl:ID COLON Type{
+	$$ = A_VarDecl_Scalar($1->pos, A_VarDeclScalar($1->pos, $1->id, $3));
+}
+|ID LBRACKET NUM RBRACKET COLON Type{
+	$$ = A_VarDecl_Array($1->pos, A_VarDeclArray($1->pos, $1->id, $3->num, $6));
+}
+
+FieldDeclList: FieldDecl COMMA FieldDeclList{
+	$$ = A_VarDeclList($1, $3);
+}
+| FieldDecl{
+	$$ = A_VarDeclList($1, NULL);
+}
+| {
+	$$ = NULL;
 }
 ;
 
@@ -530,16 +528,27 @@ CallStmt: Fncall SEMICOLON{
 }
 ;
 
-IfStmt: IF LPAR BoolExpr RPAR LBRACE CodeBlockStmtList RBRACE{
-	$$ = A_IfStmt($1, $3, $6, nullptr);
+BoolUnit_:LPAR ComExpr RPAR{
+	$$ = A_ComExprUnit($1, $2);
 }
-| IF LPAR BoolExpr RPAR LBRACE CodeBlockStmtList RBRACE ELSE LBRACE CodeBlockStmtList RBRACE{
-	$$ = A_IfStmt($1, $3, $6, $10);
+| LPAR BoolUOpExpr RPAR{
+	$$ = A_BoolUOpExprUnit($1, $2);
+}
+| LPAR BoolExpr RPAR{
+	$$ = A_BoolExprUnit($1, $2);
 }
 ;
 
-WhileStmt: WHILE LPAR BoolExpr RPAR LBRACE CodeBlockStmtList RBRACE{
-	$$ = A_WhileStmt($1, $3, $6);
+IfStmt: IF BoolUnit_ LBRACE CodeBlockStmtList RBRACE{
+	$$ = A_IfStmt($1, $2, $4, nullptr);
+}
+| IF BoolUnit_ LBRACE CodeBlockStmtList RBRACE ELSE LBRACE CodeBlockStmtList RBRACE{
+	$$ = A_IfStmt($1, $2, $4, $8);
+}
+;
+
+WhileStmt: WHILE BoolUnit_ LBRACE CodeBlockStmtList RBRACE{
+	$$ = A_WhileStmt($1, $2, $4);
 }
 ;
 
@@ -556,5 +565,3 @@ int yywrap()
   return(1);
 }
 }
-
-
