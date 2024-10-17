@@ -112,7 +112,6 @@ extern int  yywrap();
 %type	<arithExpr> ArithExpr;
 %type	<boolExpr> BoolExpr;
 %type	<arithBiOpExpr> ArithBiOpExpr;
-%type	<arithUExpr> ArithUExpr;
 %type	<exprUnit> ExprUnit;
 %type	<fnCall> Fncall;
 %type	<indexExpr> IndexExpr;
@@ -531,7 +530,7 @@ CallStmt: Fncall SEMICOLON{
 BoolUnit_:LPAR ComExpr RPAR{
 	$$ = A_ComExprUnit($1, $2);
 }
-| LPAR BoolUOpExpr RPAR{
+| LPAR BoolUOpExpr %prec RPAR{
 	$$ = A_BoolUOpExprUnit($1, $2);
 }
 | LPAR BoolExpr RPAR{
