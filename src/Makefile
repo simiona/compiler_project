@@ -1,5 +1,5 @@
 CXX = clang++
-CXXFLAGS = -std=c++17 -g 
+CXXFLAGS = -std=c++17
 
 TESTCASE_DIR := tests/public
 # TESTCASE_DIR := tests/end
