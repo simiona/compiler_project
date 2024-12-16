@@ -92,11 +92,9 @@ static void DFS(Node<L_block *> *r, Graph<L_block *> &bg)
 
 void SingleSourceGraph(Node<L_block *> *r, Graph<L_block *> &bg, L_func *fun)
 {
-    // Perform a DFS to mark all reachable nodes
     DFS(r, bg);
 
     int num = 0;
-    // Remove unreachable nodes from the function's blocks
     for (auto block : fun->blocks)
     {
         if (bg.mynodes[num]->color != 1)
@@ -107,11 +105,10 @@ void SingleSourceGraph(Node<L_block *> *r, Graph<L_block *> &bg, L_func *fun)
     }
 }
 
-void Show_graph(FILE *out, GRAPH::Graph<LLVMIR::L_block *> &bg)
+void Show_graph(FILE * out, GRAPH::Graph<LLVMIR::L_block *> &bg)
 {
     for (auto block_node : bg.mynodes)
     {
-        fprintf(out, "%d\n", block_node.first);
         auto block = block_node.second->info;
         fprintf(out, "%s \n", block->label->name.c_str());
         fprintf(out, "pred  %zu  ", block_node.second->preds.size());

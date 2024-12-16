@@ -131,10 +131,7 @@ list<AS_operand **> get_all_AS_operand(L_stm *stm)
 
 std::list<AS_operand **> get_def_operand(L_stm *stm)
 {
-    // List to store pointers to def operands
     list<AS_operand **> AS_operand_list;
-
-    // Identify the type of statement and add def operands to the list
     switch (stm->type)
     {
     case L_StmKind::T_BINOP:
@@ -169,7 +166,6 @@ std::list<AS_operand **> get_def_operand(L_stm *stm)
     break;
     default:
     {
-        // For other statement types, do nothing or assert failure
         if (stm->type != L_StmKind::T_STORE &&
             stm->type != L_StmKind::T_LABEL &&
             stm->type != L_StmKind::T_JUMP &&
@@ -179,7 +175,6 @@ std::list<AS_operand **> get_def_operand(L_stm *stm)
             stm->type != L_StmKind::T_ALLOCA &&
             stm->type != L_StmKind::T_GEP)
         {
-            printf("%d\n", (int)stm->type);
             assert(0);
         }
     }
@@ -201,8 +196,6 @@ list<Temp_temp *> get_def(L_stm *stm)
 std::list<AS_operand **> get_use_operand(L_stm *stm)
 {
     list<AS_operand **> AS_operand_list;
-
-    // Identify the type of statement and add use operands to the list
     switch (stm->type)
     {
     case L_StmKind::T_BINOP:
@@ -221,13 +214,8 @@ std::list<AS_operand **> get_use_operand(L_stm *stm)
     }
     break;
     case L_StmKind::T_LABEL:
-    {
-    }
-    break;
     case L_StmKind::T_JUMP:
-    {
-    }
-    break;
+        break;
     case L_StmKind::T_CMP:
     {
         AS_operand_list.push_back(&(stm->u.CMP->left));
@@ -285,7 +273,6 @@ std::list<AS_operand **> get_use_operand(L_stm *stm)
     break;
     default:
     {
-        printf("%d\n", (int)stm->type);
         assert(0);
     }
     }
@@ -313,11 +300,17 @@ TempSet_ &FG_Out(GRAPH::Node<LLVMIR::L_block *> *r)
 {
     return InOutTable[r].out;
 }
-TempSet_ &FG_In(GRAPH::Node<LLVMIR::L_block *> *r) { return InOutTable[r].in; }
+
+TempSet_ &FG_In(GRAPH::Node<LLVMIR::L_block *> *r)
+{
+    return InOutTable[r].in;
+}
+
 TempSet_ &FG_def(GRAPH::Node<LLVMIR::L_block *> *r)
 {
     return UseDefTable[r].def;
 }
+
 TempSet_ &FG_use(GRAPH::Node<LLVMIR::L_block *> *r)
 {
     return UseDefTable[r].use;
@@ -325,7 +318,6 @@ TempSet_ &FG_use(GRAPH::Node<LLVMIR::L_block *> *r)
 
 static void Use_def(GRAPH::Node<LLVMIR::L_block *> *r, GRAPH::Graph<LLVMIR::L_block *> &bg, std::vector<Temp_temp *> &args)
 {
-    // Iterate over all nodes in the graph
     for (const auto [key, node] : bg.mynodes)
     {
         auto &def = FG_def(node);
@@ -333,13 +325,11 @@ static void Use_def(GRAPH::Node<LLVMIR::L_block *> *r, GRAPH::Graph<LLVMIR::L_bl
         def.clear();
         use.clear();
 
-        // Process each instruction in the block
         for (auto stm : node->info->instrs)
         {
             auto def_temp = get_def(stm);
             auto use_temp = get_use(stm);
 
-            // Add temps to use set if they are not in def set
             for (auto temp : use_temp)
             {
                 if (def.find(temp) == def.end())
@@ -354,38 +344,35 @@ static int gi = 0;
 static bool LivenessIteration(GRAPH::Node<LLVMIR::L_block *> *r,
                               GRAPH::Graph<LLVMIR::L_block *> &bg)
 {
-    // Compute in and out sets for each block
     bool changed = false;
     for (auto it = bg.mynodes.rbegin(); it != bg.mynodes.rend(); it++)
     {
         auto node = it->second;
-        auto &old_in = InOutTable[node].in;
-        auto &old_out = InOutTable[node].out;
+
         auto &def = UseDefTable[node].def;
         auto &use = UseDefTable[node].use;
 
-        // Compute out[n] = union of in[s] for all successors s of n
-        TempSet_ new_out{};
+        TempSet_ new_live_out{};
+        auto &old_live_in = InOutTable[node].in;
+        auto &old_live_out = InOutTable[node].out;
         for (auto succ : node->succs)
         {
             auto succ_in = FG_In(bg.mynodes[succ]);
-            new_out.insert(succ_in.begin(), succ_in.end());
+            new_live_out.insert(succ_in.begin(), succ_in.end());
         }
 
-        // Compute in[n] = use[n] union (out[n] - def[n])
-        TempSet_ new_in = old_out;
+        TempSet_ new_live_in = old_live_out;
         for (auto temp : def)
         {
-            new_in.erase(temp);
+            new_live_in.erase(temp);
         }
-        new_in.insert(use.begin(), use.end());
+        new_live_in.insert(use.begin(), use.end());
 
-        // Update if in or out sets have changed
-        if (old_in != new_in || old_out != new_out)
+        if (old_live_in != new_live_in || old_live_out != new_live_out)
         {
             changed = true;
-            old_in = new_in;
-            old_out = new_out;
+            old_live_in = new_live_in;
+            old_live_out = new_live_out;
         }
     }
     return changed;
